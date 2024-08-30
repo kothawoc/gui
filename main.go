@@ -238,7 +238,8 @@ func newPost(content *fyne.Container) {
 			mail := messages.NewMessageTool()
 			mail.Article.Header.Add("Newsgroups", groupsEntry.Text)
 			mail.Article.Header.Add("Subject", subjectEntry.Text)
-			mail.Article.Header.Add("Content-Type", "multipart/mixed; boundary=\"nxtprt\"")
+			//	mail.Article.Header.Add("Content-Type", "multipart/mixed; boundary=\"nxtprt\"")
+			mail.Article.Header.Add("Content-Type", "text/plain")
 			mail.Article.Header.Add("Content-Transfer-Encoding", "8bit")
 			mail.Preamble = editor.Text
 			mail.Parts = []messages.MimePart{
