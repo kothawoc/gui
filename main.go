@@ -245,13 +245,14 @@ func newPost(content *fyne.Container) {
 				{Header: textproto.MIMEHeader{
 					"Content-Type": []string{"text/plain"},
 				}, Content: []byte(editor.Text)},
-				{Header: textproto.MIMEHeader{
-					"Content-Type": []string{"text/markdown"},
-				}, Content: []byte(editor.Text)},
+				//		{Header: textproto.MIMEHeader{
+				//			"Content-Type": []string{"text/markdown"},
+				//		}, Content: []byte(editor.Text)},
 			}
 			log.Printf("POSTING MAIL LIKE THIS: [%#v][%s]", mail, mail.RawMail())
 
-			kc.Post(mail)
+			kc.NNTPclient.Post(strings.NewReader(mail.RawMail()))
+			//kc.Post(mail)
 		},
 	}
 	form.Append("News Groups", groupsEntry)
