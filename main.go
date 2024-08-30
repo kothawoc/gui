@@ -137,57 +137,61 @@ func createPeerList(vbox, content *fyne.Container, win fyne.Window) {
 func displayHome(content *fyne.Container) {
 	content.RemoveAll()
 	label := widget.NewLabel("Select an item from the navigation pane")
+	rt := widget.NewRichTextFromMarkdown(lang.L("App: Welcome Message"))
+	rt.Wrapping = fyne.TextWrapWord
+	/*
+			rt := widget.NewRichTextFromMarkdown(`
+		# What a load of shit goes here
+		This is a master title
 
-	rt := widget.NewRichTextFromMarkdown(`
-# What a load of shit goes here
-This is a master title
+		## these are sub titles
+		## and another
 
-## these are sub titles
-## and another
+		### even deeper
+		#### deeper still
 
-### even deeper
-#### deeper still
-
-* Will this work?
-  + how about sub lists
-  + this will be cool
-* I assume it will
-* this is stars
-
-
-+ this one is plus
-  - or lets try to
-  - go down the rabbit hole
-    * and make it a level
-	* deeper
-+ signs, I wonder if it also
-+ accepts others
+		* Will this work?
+		  + how about sub lists
+		  + this will be cool
+		* I assume it will
+		* this is stars
 
 
-- this is another, how
-  + how about sub lists
-  + this will be cool
-- about this, does it
-- work too?
-
-## lower
-
-And is this ok?
-1. [ ] What do you think?
-2. [/] This is another?
-3. [?] Another
-4. [x] and again...
+		+ this one is plus
+		  - or lets try to
+		  - go down the rabbit hole
+		    * and make it a level
+			* deeper
+		+ signs, I wonder if it also
+		+ accepts others
 
 
-> I'm not so **sure** about it.
-> Seems *very* limited to me.
-> I'm not even sure this quote thigng is working, is it that I
-> chose to add some word formatting mid line?
+		- this is another, how
+		  + how about sub lists
+		  + this will be cool
+		- about this, does it
+		- work too?
 
-### higher too
+		## lower
 
-What a load of crap goes here.
-	`)
+		And is this ok?
+		1. [ ] What do you think?
+		2. [/] This is another?
+		3. [?] Another
+		4. [x] and again...
+
+
+		> I'm not so **sure** about it.
+		> Seems *very* limited to me.
+		> I'm not even sure this quote thigng is working, is it that I
+		> chose to add some word formatting mid line?
+
+		### higher too
+
+		What a load of crap goes here.
+			`
+
+	*/
 
 	content.Add(rt)
 
