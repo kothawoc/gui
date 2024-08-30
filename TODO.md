@@ -7,11 +7,11 @@
 - [x] List group content.
 - [x] Display message.
 - [ ] Initial setup.
-- [ ] Add peers.
+- [x] Add peers.
 - [ ] Remove peers.
 - [ ] Add groups.
 - [ ] Remove groups.
-- [ ] Post to group.
+- [x] Post to group.
 - [ ] Display temporal front page of feeds
 - [x] Display specific group.
 - [ ] Delete posts.

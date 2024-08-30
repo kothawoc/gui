@@ -235,6 +235,23 @@ func newPost(content *fyne.Container) {
 				Title:   "Form for: " + groupsEntry.Text,
 				Content: editor.Text,
 			})
+			mail := messages.NewMessageTool()
+			mail.Article.Header.Add("Newsgroups", groupsEntry.Text)
+			mail.Article.Header.Add("Subject", subjectEntry.Text)
+			mail.Article.Header.Add("Content-Type", "multipart/mixed; boundary=\"nxtprt\"")
+			mail.Article.Header.Add("Content-Transfer-Encoding", "8bit")
+			mail.Preamble = editor.Text
+			mail.Parts = []messages.MimePart{
+				{Header: textproto.MIMEHeader{
+					"Content-Type": []string{"text/plain"},
+				}, Content: []byte(editor.Text)},
+				{Header: textproto.MIMEHeader{
+					"Content-Type": []string{"text/markdown"},
+				}, Content: []byte(editor.Text)},
+			}
+			log.Printf("POSTING MAIL LIKE THIS: [%#v][%s]", mail, mail.RawMail())
+
+			kc.Post(mail)
 		},
 	}
 	form.Append("News Groups", groupsEntry)
