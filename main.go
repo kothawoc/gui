@@ -65,6 +65,7 @@ func createPeerList(vbox, content *fyne.Container, win fyne.Window) {
 	edit.OnSubmitted = func(text string) {
 		edit.Hidden = true
 		peerlist = append(peerlist, text)
+		kc.AddPeer(text)
 		createPeerList(vbox, content, win)
 		vbox.Refresh()
 		//additem(text, vbox, content, edit, button)
