@@ -64,8 +64,13 @@ func createPeerList(vbox, content *fyne.Container, win fyne.Window) {
 	edit := widget.NewEntry()
 	edit.OnSubmitted = func(text string) {
 		edit.Hidden = true
+		err := kc.AddPeer(text)
+		if err != nil {
+			log.Printf("GUI ERROR: failed to add peer.")
+			return
+		}
+
 		peerlist = append(peerlist, text)
-		kc.AddPeer(text)
 		createPeerList(vbox, content, win)
 		vbox.Refresh()
 		//additem(text, vbox, content, edit, button)
@@ -223,8 +228,8 @@ func newPost(content *fyne.Container) {
 
 	form := &widget.Form{
 		Items: []*widget.FormItem{
-			//				{Text: "Name", Widget: name, HintText: "Your full name"},
-			//				{Text: "Email", Widget: email, HintText: "A valid email address"},
+			//		{Text: "Name", Widget: name, HintText: "Your full name"},
+			//	    {Text: "Email", Widget: email, HintText: "A valid email address"},
 		},
 		OnCancel: func() {
 			fmt.Println("Cancelled")
