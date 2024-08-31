@@ -67,6 +67,7 @@ func createPeerList(vbox, content *fyne.Container, win fyne.Window) {
 		err := kc.AddPeer(text)
 		if err != nil {
 			log.Printf("GUI ERROR: failed to add peer.")
+			button.Show()
 			return
 		}
 
