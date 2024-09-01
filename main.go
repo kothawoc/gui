@@ -57,7 +57,32 @@ var kc *kothawoc.Client
 var peerlist []string = []string{}
 
 func createPeerList(vbox, content *fyne.Container, win fyne.Window) {
+	//*
+	group := kc.DeviceId() + ".peers"
 
+	a, err := kc.NNTPclient.Group(group)
+	peerlist := []string{}
+
+	if err != nil {
+		log.Printf("Error in listing newsgroup conftent: [%v]", err)
+		return
+	}
+	res, err := kc.NNTPclient.Over(int(a.Low), int(a.High))
+	for _, msg := range res {
+
+		peer := strings.Split(msg.Subject, " ")[1]
+		peerlist = append(peerlist, peer)
+		//label := widget.NewLabel(line.Subject)
+
+		//	item := NewTappableLabel(msg.Subject)
+		//	item.OnTapped = func(e *fyne.PointEvent) {
+		//		displayMessage(content, msg.Number)
+		//	}
+
+		//text := widget.NewRichTextWithText(fmt.Sprintf("%v", res))
+		//	content.Add(item)
+	}
+	//*/
 	vbox.RemoveAll()
 	button := widget.NewButton(lang.L("Peers"), nil)
 	vbox.Add(button)
@@ -112,6 +137,8 @@ func createPeerList(vbox, content *fyne.Container, win fyne.Window) {
 			button := widget.NewButton(lang.L("Delete"), nil)
 			button.OnTapped = func() {
 
+				// this is now broken, because it uses the nntp server for the peer list
+				// so it needs to send a cancel message to delete it.
 				for i := 0; i < len(peerlist); i++ {
 					if peerlist[i] == text {
 						peerlist = append(peerlist[:i], peerlist[i+1:]...)
