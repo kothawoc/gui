@@ -28,36 +28,8 @@ var localeFS embed.FS
 
 var kc *kothawoc.Client
 
-/*
-	func main() {
-		a := app.New()
-		w := a.NewWindow("Hello")
-
-		hello := widget.NewLabel("Hello Fyne!")
-		button := widget.NewButton("Hi!", nil)
-		newContainer := container.NewVBox(
-			hello,
-			button,
-		)
-
-		button.OnTapped = func() {
-			hello.SetText("Welcome :)")
-			if hello.Visible() {
-				hello.Hide()
-			} else {
-				hello.Show()
-			}
-
-		}
-
-		newBoarders := container.NewBorder(nil, nil, hello, nil, newContainer)
-
-		w.SetContent(newBoarders)
-
-		w.ShowAndRun()
-	}
-*/
 var peerlist []string = []string{}
+var mainWindow fyne.Window
 
 func createPeerList(vbox, content *fyne.Container, win fyne.Window) {
 	//*
@@ -77,15 +49,7 @@ func createPeerList(vbox, content *fyne.Container, win fyne.Window) {
 		if peers[0] == "AddPeer" {
 			peerlist = append(peerlist, peers[1])
 		}
-		//label := widget.NewLabel(line.Subject)
 
-		//	item := NewTappableLabel(msg.Subject)
-		//	item.OnTapped = func(e *fyne.PointEvent) {
-		//		displayMessage(content, msg.Number)
-		//	}
-
-		//text := widget.NewRichTextWithText(fmt.Sprintf("%v", res))
-		//	content.Add(item)
 	}
 	//*/
 	vbox.RemoveAll()
@@ -104,8 +68,7 @@ func createPeerList(vbox, content *fyne.Container, win fyne.Window) {
 		peerlist = append(peerlist, text)
 		createPeerList(vbox, content, win)
 		vbox.Refresh()
-		//additem(text, vbox, content, edit, button)
-		//vbox.Add(item)
+
 	}
 
 	edit.Hide()
@@ -429,6 +392,38 @@ func displayNewsgroupContent(content *fyne.Container, group string) {
 			displayMessage(content, line.Number)
 		}
 
+		item.OnTappedSecondary = func(e *fyne.PointEvent) {
+
+			menuItem1 := fyne.NewMenuItem(lang.L("Cancel Article"), nil)
+			menu := fyne.NewMenu(lang.L("menu.Peer"), menuItem1)
+			menuItem1.Action = func() {
+				msg := (&messages.MessageTool{
+					Article: &nntp.Article{
+
+						Header: textproto.MIMEHeader{
+							"Subject":                   {"cmsg cancel " + line.MessageId},
+							"Control":                   {"Cancel " + line.MessageId},
+							"Newsgroups":                {group},
+							"Content-Type":              {"multipart/mixed; boundary=\"nxtprt\""},
+							"Content-Transfer-Encoding": {"8bit"},
+						},
+					},
+					Preamble: "This is a MIME control message.",
+					Parts:    []messages.MimePart{},
+				}).RawMail()
+
+				kc.NNTPclient.Post(strings.NewReader(msg))
+				log.Printf("AND THE LINES WAS[%#v]", line)
+			}
+
+			//	m := messages.MessageTool{}
+			//	m.
+			popUpMenu := widget.NewPopUpMenu(menu, mainWindow.Canvas())
+
+			popUpMenu.ShowAtPosition(e.AbsolutePosition)
+			popUpMenu.Show()
+		}
+
 		//text := widget.NewRichTextWithText(fmt.Sprintf("%v", res))
 		content.Add(item)
 	}
@@ -483,6 +478,7 @@ func main() {
 
 	myApp := app.New()
 	myWindow := myApp.NewWindow(lang.L("App: NNTP/TOR"))
+	mainWindow = myWindow
 	content := container.NewVBox()
 
 	// Create a list for the navigation pane
