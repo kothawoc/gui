@@ -30,6 +30,8 @@ var kc *kothawoc.Client
 
 var peerlist []string = []string{}
 var mainWindow fyne.Window
+var leftbox *fyne.Container
+var content *fyne.Container
 
 func createPeerList(vbox, content *fyne.Container, win fyne.Window) {
 	//*
@@ -382,15 +384,28 @@ func displayNewsgroupContent(content *fyne.Container, group string) {
 		log.Printf("Error in listing newsgroup conftent: [%v]", err)
 		return
 	}
+	//tmp, err := kc.NNTPclient.ListOverviewFmt()
+	//log.Printf("listoverviewformat [%#v][%v]", tmp, err)
 	res, err := kc.NNTPclient.Over(int(a.Low), int(a.High))
 	for _, line := range res {
 
 		//label := widget.NewLabel(line.Subject)
+		/*
+			** TODO FIXME:
+			** This is broken, //tmp, err := kc.NNTPclient.ListOverviewFmt() Hangs, and it gets this in the wrong order, check if it's the server or client (or both).
+			2024/09/02 18:30:52 AND THE LINES WAS[nntpclient.OverItem{Number:"1725134320", Subject:"AddPeer 3rm3lavawfdngj6tspw2rrsfjcz4pxh3o7ltjxaugyhnauhir7ngvrad", Date:"3rm3lavawfdngj6tspw2rrsfjcz4pxh3o7ltjxaugyhnauhir7ngvrad", MessageId:"Sat, 31 Aug 2024 19:59:07 +0000", References:"<1jd6tgb-snjkpy2ltz5s3s2j3rxo6igmp2xxmvkj@3rm3lavawfdngj6tspw2rrsfjcz4pxh3o7ltjxaugyhnauhir7ngvrad>", bytesMetadata:"", linesMetadata:"368"}]
+			2024/09/02 18:30:52 AND THE LINES WAS[nntpclient.OverItem{Number:"1725136214", Subject:"AddPeer 3buuqev6fbwybjo6qch2bescuelkcqm4sf7w73dm3vmf55qnudug2kyd", Date:"3rm3lavawfdngj6tspw2rrsfjcz4pxh3o7ltjxaugyhnauhir7ngvrad", MessageId:"Sat, 31 Aug 2024 20:30:17 +0000", References:"<1jd6vap-ihwa3bloqlwdr2d5iabtvhg5egabm7j5@3rm3lavawfdngj6tspw2rrsfjcz4pxh3o7ltjxaugyhnauhir7ngvrad>", bytesMetadata:"", linesMetadata:"368"}]
+			From:=Date
+			Date:=MessageId
+			MessageId:=References
+		*/
+		MessageId := line.References
 
 		item := NewTappableLabel(line.Subject)
 		item.OnTapped = func(e *fyne.PointEvent) {
 			displayMessage(content, line.Number)
 		}
+		log.Printf("AND THE LINES WAS[%#v]", line)
 
 		item.OnTappedSecondary = func(e *fyne.PointEvent) {
 
@@ -401,19 +416,30 @@ func displayNewsgroupContent(content *fyne.Container, group string) {
 					Article: &nntp.Article{
 
 						Header: textproto.MIMEHeader{
-							"Subject":                   {"cmsg cancel " + line.MessageId},
-							"Control":                   {"Cancel " + line.MessageId},
+							"Subject":                   {"cmsg cancel " + MessageId},
+							"Control":                   {"cancel " + MessageId},
 							"Newsgroups":                {group},
 							"Content-Type":              {"multipart/mixed; boundary=\"nxtprt\""},
 							"Content-Transfer-Encoding": {"8bit"},
 						},
 					},
 					Preamble: "This is a MIME control message.",
-					Parts:    []messages.MimePart{},
+					Parts: []messages.MimePart{
+						{
+							Header:  textproto.MIMEHeader{"Content-Type": []string{"application/news-groupinfo;charset=UTF-8"}},
+							Content: []byte("Cancel " + MessageId),
+						},
+						{
+							Header:  textproto.MIMEHeader{"Content-Type": []string{"text/plain;charset=UTF-8"}},
+							Content: []byte("This is a system control message to delete the article " + MessageId),
+						},
+					},
 				}).RawMail()
 
 				kc.NNTPclient.Post(strings.NewReader(msg))
 				log.Printf("AND THE LINES WAS[%#v]", line)
+
+				createPeerList(leftbox, content, mainWindow)
 			}
 
 			//	m := messages.MessageTool{}
@@ -526,6 +552,7 @@ func main() {
 		func() fyne.CanvasObject {
 			// peers entry
 			vbox := container.NewVBox()
+			leftbox = vbox
 			createPeerList(vbox, content, myWindow)
 			return vbox
 		},
