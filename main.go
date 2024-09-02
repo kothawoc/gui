@@ -15,6 +15,9 @@ import (
 	"fyne.io/fyne/v2/lang"
 	"fyne.io/fyne/v2/widget"
 
+	//vcard "github.com/emersion/go-vcard"
+
+	"github.com/emersion/go-vcard"
 	"github.com/kothawoc/go-nntp"
 	"github.com/kothawoc/kothawoc"
 	"github.com/kothawoc/kothawoc/pkg/messages"
@@ -70,8 +73,10 @@ func createPeerList(vbox, content *fyne.Container, win fyne.Window) {
 	res, err := kc.NNTPclient.Over(int(a.Low), int(a.High))
 	for _, msg := range res {
 
-		peer := strings.Split(msg.Subject, " ")[1]
-		peerlist = append(peerlist, peer)
+		peers := strings.Split(msg.Subject, " ")
+		if peers[0] == "AddPeer" {
+			peerlist = append(peerlist, peers[1])
+		}
 		//label := widget.NewLabel(line.Subject)
 
 		//	item := NewTappableLabel(msg.Subject)
@@ -168,6 +173,63 @@ func createPeerList(vbox, content *fyne.Container, win fyne.Window) {
 	vbox.Refresh()
 }
 
+func displayAddGroup(content *fyne.Container) {
+
+	dId := kc.DeviceId()
+	dln := len(dId)
+	shortId := dId[0:3] + "..." + dId[dln-3:]
+	groupName := widget.NewEntry()
+	groupDescription := widget.NewEntry()
+	idAlias := widget.NewEntry()
+	language := widget.NewEntry()
+	url := widget.NewEntry()
+
+	form := &widget.Form{
+		//	Items: []*widget.FormItem{
+		//	},
+		OnCancel: func() {
+			fmt.Println("Cancelled")
+		},
+		OnSubmit: func() {
+
+			card := vcard.Card{}
+			card.SetValue(vcard.FieldNickname, idAlias.Text)
+			card.SetValue(vcard.FieldLanguage, language.Text)
+			card.SetValue(vcard.FieldURL, url.Text)
+			vcard.ToV4(card)
+
+			msg, err := messages.CreateNewsGroupMail(kc.DeviceKey(), kc.Server.IdGenerator, dId+"."+groupName.Text, groupDescription.Text, card, nntp.PostingPermitted) //(string, error)
+			if err != nil {
+				log.Printf("Failed at creating new groups mail.")
+			}
+
+			kc.NNTPclient.Post(strings.NewReader(msg))
+
+		},
+	}
+
+	// add group name
+	// group descripton
+	// group vcard
+	//   CATEGORIES:public\,cabbage
+	//   LANG:en
+	//   NICKNAME:The magic bus
+	//   URL:https://github.com/kothawoc
+
+	form.Append("Name "+shortId+".", groupName)
+	form.Append("Description", groupDescription)
+	form.Append("ID Alias", idAlias)
+	form.Append("Language", language)
+	form.Append("URL", url)
+
+	content.RemoveAll()
+	label := widget.NewLabel("Select an item from the navigation pane")
+	content.Add(label)
+	content.Add(form)
+
+	content.Refresh()
+}
+
 func displayHome(content *fyne.Container) {
 	content.RemoveAll()
 	label := widget.NewLabel("Select an item from the navigation pane")
@@ -234,22 +296,9 @@ func displayHome(content *fyne.Container) {
 
 func newPost(content *fyne.Container) {
 
-	//	groupsLabel := widget.NewLabel(lang.L("News Groups"))
 	groupsEntry := widget.NewEntry()
-	//	groupsBox := container.NewPadded(groupsLabel, groupsEntry)
-	//	groupsBox.Add(groupsLabel)
-	//	groupsBox.Add(groupsEntry)
 
-	//	groupsLabel.Resize(fyne.NewSize(100, 0))
-	//	groupsEntry.Resize(fyne.NewSize(content.Size().Width-groupsLabel.Size().Width, 0))
-	//groupsBox.Resize(fyne.NewSize(500, 0))
-
-	//	subjectLabel := widget.NewLabel(lang.L("Subject"))
 	subjectEntry := widget.NewEntry()
-	//subjectEntry.
-	//	subjectBox := container.NewHBox()
-	//	subjectBox.Add(subjectLabel)
-	//	subjectBox.Add(subjectEntry)
 
 	editor := widget.NewMultiLineEntry()
 	editor.SetMinRowsVisible(8)
@@ -508,17 +557,24 @@ func main() {
 			//	label.SetText("New Post")
 			return vbox
 		},
+		func() fyne.CanvasObject {
+			//	label := widget.NewLabel("Copy")
+			label := NewTappableLabel("Add Group")
+			vbox := container.NewVBox()
+			vbox.Add(label)
+			label.OnTapped = func(e *fyne.PointEvent) {
+				//newPost(content)
+				displayAddGroup(content)
+			}
+
+			return vbox
+		},
 	} {
 		navList.Add(i())
 	}
 
-	// Create a content area
-	//label := widget.NewLabel("Select an item from the navigation pane")
-	//content.Add(label)
-
 	displayHome(content)
 
-	// Create the split container
 	navContainer := container.NewScroll(navList)
 	contentContainer := container.NewScroll(content)
 	ScrollReset = func() {

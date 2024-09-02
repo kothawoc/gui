@@ -9,7 +9,7 @@
 - [ ] Initial setup.
 - [x] Add peers.
 - [ ] Remove peers.
-- [ ] Add groups.
+- [x] Add groups.
 - [ ] Remove groups.
 - [x] Post to group.
 - [ ] Display temporal front page of feeds
