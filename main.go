@@ -149,6 +149,96 @@ func displayAddGroup(content *fyne.Container) {
 	language := widget.NewEntry()
 	url := widget.NewEntry()
 
+	//{"post", "read", "reply", "cancel", "supersede"}
+	labelSupersede := lang.L("Supersede")
+	labelCancel := lang.L("Cancel")
+	labelRead := lang.L("Read")
+	labelReply := lang.L("Reply")
+	labelPost := lang.L("Post")
+
+	//	labelUserId := lang.L("UserId")
+
+	checkGroup := widget.NewCheckGroup([]string{labelRead, labelReply, labelPost}, func(s []string) { fmt.Println("selected", s) })
+	checkGroup.Selected = []string{labelRead, labelReply}
+	checkGroup.Horizontal = true
+	//checkEdit := widget.NewEntry()
+
+	//checkForm := container.New(layout.NewFormLayout())
+	//
+	//	checkGroup := widget.NewCheckGroup([]string{labelRead, labelReply, labelPost, labelCancel, labelSupersede}, func(s []string) { fmt.Println("selected", s) })
+	//checkForm.Add(checkGroup)
+	//checkForm.Add(checkEdit)
+	//hbox := checkForm
+
+	NewCheck := func(s string, checked bool) fyne.Widget {
+		cb := widget.NewCheck(s, func(i bool) {})
+		if checked {
+			cb.Checked = true
+		}
+		return cb
+	}
+
+	type PermsT []struct {
+		Vbox, hbox                           *fyne.Container
+		Text                                 *widget.Entry
+		Read, Reply, Post, Cancel, Supersede fyne.Widget
+	}
+	/*
+		func(p *PermsT) Add() {
+
+		}
+
+		func(p *PermsT) Add() {
+
+		}
+
+		extraPerms := PermsT{}
+		extraPerms.
+	*/
+	NewCheckPerms := func() *fyne.Container {
+		vbox := container.NewVBox()
+		checkHbox := container.NewHBox()
+		checkHbox.Add(NewCheck(labelRead, true))
+		checkHbox.Add(NewCheck(labelReply, true))
+		checkHbox.Add(NewCheck(labelPost, false))
+		checkHbox.Add(NewCheck(labelCancel, false))
+		checkHbox.Add(NewCheck(labelSupersede, false))
+		//spacer := widget.NewSeparator()
+		spacer := widget.NewLabel("    ")
+		checkHbox.Add(spacer)
+		button := widget.NewButton("-", func() {})
+		checkHbox.Add(button)
+		//	checkGroup := widget.NewCheckGroup([]string{labelRead, labelReply, labelPost, labelCancel, labelSupersede}, func(s []string) { fmt.Println("selected", s) })
+		//checkGroup := widget.NewCheckGroup([]string{labelRead, labelReply}, func(s []string) { fmt.Println("selected", s) })
+		//	checkGroup.Selected = []string{labelRead, labelReply}
+		//	checkGroup.Horizontal = true
+
+		checkEdit := widget.NewEntry()
+		//		checkForm := container.New(layout.NewFormLayout())
+
+		//	buttonRemove := widget.NewButton("+", func() {})
+		//		labelUID := widget.NewLabel(labelUserId)
+
+		//		checkForm.Add(labelUID)
+		//		checkForm.Add(checkEdit)
+		vbox.Add(checkEdit)
+		vbox.Add(checkHbox)
+		//checkForm.Add(buttonRemove)
+
+		return vbox
+	}
+
+	//hbox := container.NewHSplit(checkGroup, checkEdit)
+	//	hbox := container.NewGridWithColumns(2, checkGroup, checkEdit)
+	//tbox := container.
+	//tbox.Add(checkEdit)
+	//	hbox := container.NewAdaptiveGrid(2, tbox, checkGroup)
+
+	//hbox := container.NewHBox()
+	//hbox.Add(checkGroup)
+	//hbox.Add(checkEdit)
+	buttonAdd := widget.NewButton("+", func() {})
+
 	form := &widget.Form{
 		//	Items: []*widget.FormItem{
 		//	},
@@ -177,7 +267,7 @@ func displayAddGroup(content *fyne.Container) {
 	// group descripton
 	// group vcard
 	//   CATEGORIES:public\,cabbage
-	//   LANG:en
+	//   LANG:enCheckGroup Item 2
 	//   NICKNAME:The magic bus
 	//   URL:https://github.com/kothawoc
 
@@ -186,6 +276,11 @@ func displayAddGroup(content *fyne.Container) {
 	form.Append("ID Alias", idAlias)
 	form.Append("Language", language)
 	form.Append("URL", url)
+	form.Append("Group Permissions", checkGroup)
+	form.Append("Extra Perms", NewCheckPerms())
+	form.Append("", NewCheckPerms())
+	form.Append("", NewCheckPerms())
+	form.Append("Add User Perms", buttonAdd)
 
 	content.RemoveAll()
 	label := widget.NewLabel("Select an item from the navigation pane")
