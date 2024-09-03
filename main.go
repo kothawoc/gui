@@ -14,10 +14,10 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/lang"
 	"fyne.io/fyne/v2/widget"
+	"github.com/emersion/go-vcard"
 
 	//vcard "github.com/emersion/go-vcard"
 
-	"github.com/emersion/go-vcard"
 	"github.com/kothawoc/go-nntp"
 	"github.com/kothawoc/kothawoc"
 	"github.com/kothawoc/kothawoc/pkg/messages"
@@ -558,7 +558,8 @@ func displayNewsgroupList(content *fyne.Container) {
 var ScrollReset func()
 
 func main() {
-	kc = kothawoc.NewClient(os.Getenv("PWD") + "/../kothawoc/data")
+	kc = kothawoc.NewClient(os.Getenv("PWD") + "/data")
+	//kc = kothawoc.NewClient(os.Getenv("PWD") + "/../kothawoc/data")
 
 	kc.Dial()
 
