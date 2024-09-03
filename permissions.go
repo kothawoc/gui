@@ -10,9 +10,10 @@ import (
 type PermsT struct {
 	Idx                                  int
 	Vbox, hbox                           *fyne.Container
-	Text                                 *widget.Entry
-	Read, Reply, Post, Cancel, Supersede fyne.Widget
-	Remove                               *widget.Button
+	TorId                                *widget.Entry
+	Read, Reply, Post, Cancel, Supersede *widget.Check
+
+	Remove *widget.Button
 }
 type PermsMgr struct {
 	Form  *widget.Form
@@ -37,6 +38,7 @@ func (p *PermsMgr) Render() {
 			p.Items = append(p.Items[:idx], p.Items[idx+1:]...)
 			p.Render()
 		}
+		p.Vbox.Add(widget.NewSeparator())
 		p.Vbox.Add(item.Vbox)
 	}
 
@@ -51,7 +53,7 @@ func (p *PermsMgr) Render() {
 	}
 }
 
-func NewCheck(s string, checked bool) fyne.Widget {
+func NewCheck(s string, checked bool) *widget.Check {
 	cb := widget.NewCheck(s, func(i bool) {})
 	if checked {
 		cb.Checked = true
@@ -71,7 +73,7 @@ func (p *PermsMgr) Add() {
 	newItem := PermsT{
 		Vbox:      container.NewVBox(),
 		hbox:      container.NewHBox(),
-		Text:      widget.NewEntry(),
+		TorId:     widget.NewEntry(),
 		Read:      NewCheck(labelRead, true),
 		Reply:     NewCheck(labelReply, true),
 		Post:      NewCheck(labelPost, false),
@@ -87,7 +89,7 @@ func (p *PermsMgr) Add() {
 	newItem.hbox.Add(widget.NewLabel("    "))
 	newItem.hbox.Add(newItem.Remove)
 
-	newItem.Vbox.Add(newItem.Text)
+	newItem.Vbox.Add(newItem.TorId)
 	newItem.Vbox.Add(newItem.hbox)
 
 	p.Items = append(p.Items, newItem)

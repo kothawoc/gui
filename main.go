@@ -162,6 +162,8 @@ func displayAddGroup(content *fyne.Container) {
 	checkGroup.Selected = []string{labelRead, labelReply}
 	checkGroup.Horizontal = true
 
+	sendFunc := func() {}
+
 	form := &widget.Form{
 		//	Items: []*widget.FormItem{
 		//	},
@@ -169,25 +171,68 @@ func displayAddGroup(content *fyne.Container) {
 			fmt.Println("Cancelled")
 		},
 		OnSubmit: func() {
-
-			card := vcard.Card{}
-			card.SetValue(vcard.FieldNickname, idAlias.Text)
-			card.SetValue(vcard.FieldLanguage, language.Text)
-			card.SetValue(vcard.FieldURL, url.Text)
-			vcard.ToV4(card)
-
-			msg, err := messages.CreateNewsGroupMail(kc.DeviceKey(), kc.Server.IdGenerator, dId+"."+groupName.Text, groupDescription.Text, card, nntp.PostingPermitted) //(string, error)
-			if err != nil {
-				log.Printf("Failed at creating new groups mail.")
-			}
-
-			kc.NNTPclient.Post(strings.NewReader(msg))
+			sendFunc()
 
 		},
 	}
 	pm := NewPemsMgr(form)
-	pm.Add()
+	//pm.Add()
 	pm.Render()
+
+	sendFunc = func() {
+
+		card := vcard.Card{}
+		card.SetValue(vcard.FieldNickname, idAlias.Text)
+		card.SetValue(vcard.FieldLanguage, language.Text)
+		card.SetValue(vcard.FieldURL, url.Text)
+		gParms := vcard.Params{}
+		for _, item := range checkGroup.Selected {
+			if item == labelRead {
+				gParms["read"] = []string{"true"}
+			}
+			if item == labelReply {
+				gParms["reply"] = []string{"true"}
+			}
+			if item == labelPost {
+				gParms["post"] = []string{"true"}
+			}
+		}
+		card.Add("X-KW-PERMS", &vcard.Field{
+			Value:  "group",
+			Params: gParms,
+		})
+		for _, item := range pm.Items {
+			parms := vcard.Params{}
+			if item.Read.Checked {
+				parms["read"] = []string{"true"}
+			}
+			if item.Reply.Checked {
+				parms["reply"] = []string{"true"}
+			}
+			if item.Post.Checked {
+				parms["post"] = []string{"true"}
+			}
+			if item.Cancel.Checked {
+				parms["cancel"] = []string{"true"}
+			}
+			if item.Supersede.Checked {
+				parms["supersede"] = []string{"true"}
+			}
+			card.Add("X-KW-PERMS", &vcard.Field{
+				Value:  item.TorId.Text,
+				Params: parms,
+			})
+		}
+		vcard.ToV4(card)
+
+		msg, err := messages.CreateNewsGroupMail(kc.DeviceKey(), kc.Server.IdGenerator, dId+"."+groupName.Text, groupDescription.Text, card, nntp.PostingPermitted) //(string, error)
+		if err != nil {
+			log.Printf("Failed at creating new groups mail.")
+		}
+
+		kc.NNTPclient.Post(strings.NewReader(msg))
+
+	}
 	// add group name
 	// group descripton
 	// group vcard
