@@ -104,7 +104,8 @@ func displayAddGroup(content *fyne.Container) {
 		}
 		vcard.ToV4(card)
 
-		msg, err := messages.CreateNewsGroupMail(kc.DeviceKey(), kc.Server.IdGenerator, dId+"."+groupName.Text, groupDescription.Text, card, nntp.PostingPermitted) //(string, error)
+		msg, err := messages.CreateNewsGroupMail(kc.DeviceKey(),
+			kc.Server.IdGenerator, dId+"."+groupName.Text, groupDescription.Text, card, nntp.PostingPermitted)
 		if err != nil {
 			log.Printf("Failed at creating new groups mail.")
 		}

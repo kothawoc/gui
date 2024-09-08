@@ -214,7 +214,7 @@ var ScrollReset func()
 func main() {
 	flag.Parse()
 
-	kc = kothawoc.NewClient(*path, *port)
+	kc, _ = kothawoc.NewClient(*path, *port)
 	//kc = kothawoc.NewClient(os.Getenv("PWD") + "/../kothawoc/data")
 
 	kc.Dial()

@@ -14,23 +14,26 @@ var peerlist []string = []string{}
 
 func createPeerList(vbox, content *fyne.Container, win fyne.Window) {
 	//*
-	group := kc.DeviceId() + ".peers"
+	//group := kc.DeviceId() + ".peers"
 
-	a, err := kc.NNTPclient.Group(group)
+	res, err := kc.NNTPclient.List("")
+
+	//slog.Info("groups list", "res", a, "error", err)
+	//panic("w00t")
 	peerlist := []string{}
 
 	if err != nil {
 		log.Printf("Error in listing newsgroup conftent: [%v]", err)
 		return
 	}
-	res, err := kc.NNTPclient.Over(int(a.Low), int(a.High))
-	for _, msg := range res {
-
-		peers := strings.Split(msg.Subject, " ")
-		if peers[0] == "AddPeer" {
-			peerlist = append(peerlist, peers[1])
+	//	res, err := kc.NNTPclient.Over(int(a.Low), int(a.High))
+	for _, item := range res {
+		isplit := strings.Split(item.Name, ".")
+		if len(isplit) == 3 &&
+			isplit[0] == kc.DeviceId() &&
+			isplit[1] == "peers" {
+			peerlist = append(peerlist, isplit[2])
 		}
-
 	}
 	//*/
 	vbox.RemoveAll()
@@ -39,7 +42,7 @@ func createPeerList(vbox, content *fyne.Container, win fyne.Window) {
 	edit := widget.NewEntry()
 	edit.OnSubmitted = func(text string) {
 		edit.Hidden = true
-		err := kc.AddPeer(text)
+		err := kc.AddPeer(text, "TODO: replace myname")
 		if err != nil {
 			log.Printf("GUI ERROR: failed to add peer.")
 			button.Show()
