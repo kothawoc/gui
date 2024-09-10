@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"log/slog"
 	"net/mail"
 	"net/textproto"
 	"os"
@@ -214,11 +215,14 @@ var ScrollReset func()
 func main() {
 	flag.Parse()
 
-	kc, _ = kothawoc.NewClient(*path, *port)
+	slog.Info("start new client")
+	KC, err := kothawoc.NewClient(*path, *port)
+	kc = KC
 	//kc = kothawoc.NewClient(os.Getenv("PWD") + "/../kothawoc/data")
-
+	slog.Info("Done new client start dial", "error", err)
 	kc.Dial()
 
+	slog.Info("Done done dial start app")
 	lang.AddTranslationsFS(localeFS, "locales")
 
 	myApp := app.New()
@@ -227,93 +231,94 @@ func main() {
 	content = container.NewVBox()
 
 	// Create a list for the navigation pane
-
 	navList := container.NewVBox()
-	for _, i := range []func() fyne.CanvasObject{
-		func() fyne.CanvasObject {
-			vbox := container.NewVBox()
+	go func() {
+		for _, i := range []func() fyne.CanvasObject{
+			func() fyne.CanvasObject {
+				vbox := container.NewVBox()
 
-			button := widget.NewButton("Home", nil)
-			button.Importance = widget.LowImportance
-			button.Alignment = widget.ButtonAlignLeading
-
-			button.OnTapped = func() {
-				displayHome(content)
-			}
-
-			vbox.Add(button)
-
-			return vbox
-		},
-		func() fyne.CanvasObject {
-			vbox := container.NewVBox()
-
-			button := widget.NewButton(lang.L("List Newsgroups"), nil)
-			button.Importance = widget.LowImportance
-			button.Alignment = widget.ButtonAlignLeading
-			n := 0
-			button.OnTapped = func() {
-				displayNewsgroupList(content)
-				return
-				n++
-				button := widget.NewButton(fmt.Sprintf("Add [%d]", n), nil)
+				button := widget.NewButton("Home", nil)
 				button.Importance = widget.LowImportance
 				button.Alignment = widget.ButtonAlignLeading
 
-				content.Objects = append([]fyne.CanvasObject{button}, content.Objects...)
+				button.OnTapped = func() {
+					displayHome(content)
+				}
 
-			}
+				vbox.Add(button)
 
-			vbox.Add(button)
+				return vbox
+			},
+			func() fyne.CanvasObject {
+				vbox := container.NewVBox()
 
-			return vbox
-		},
-		func() fyne.CanvasObject {
-			// peers entry
-			vbox := container.NewVBox()
-			leftbox = vbox
-			createPeerList(vbox, content, myWindow)
-			return vbox
-		},
-		func() fyne.CanvasObject {
-			//	label := widget.NewLabel("Copy")
-			label := NewTappableLabel("New Post")
-			vbox := container.NewVBox()
-			vbox.Add(label)
-			label.OnTapped = func(e *fyne.PointEvent) {
-				newPost(content)
+				button := widget.NewButton(lang.L("List Newsgroups"), nil)
+				button.Importance = widget.LowImportance
+				button.Alignment = widget.ButtonAlignLeading
+				n := 0
+				button.OnTapped = func() {
+					displayNewsgroupList(content)
+					return
+					n++
+					button := widget.NewButton(fmt.Sprintf("Add [%d]", n), nil)
+					button.Importance = widget.LowImportance
+					button.Alignment = widget.ButtonAlignLeading
 
-			}
-			label.OnTappedSecondary = func(e *fyne.PointEvent) {
-				log.Printf("This is the override of ontapped.")
-				menuItem1 := fyne.NewMenuItem("A", nil)
-				menuItem2 := fyne.NewMenuItem("B", nil)
-				menuItem3 := fyne.NewMenuItem("C", nil)
-				menu := fyne.NewMenu("File", menuItem1, menuItem2, menuItem3)
+					content.Objects = append([]fyne.CanvasObject{button}, content.Objects...)
 
-				popUpMenu := widget.NewPopUpMenu(menu, myWindow.Canvas())
+				}
 
-				popUpMenu.ShowAtPosition(e.AbsolutePosition)
-				popUpMenu.Show()
-			}
-			//	label.SetText("New Post")
-			return vbox
-		},
-		func() fyne.CanvasObject {
-			//	label := widget.NewLabel("Copy")
-			label := NewTappableLabel("Add Group")
-			vbox := container.NewVBox()
-			vbox.Add(label)
-			label.OnTapped = func(e *fyne.PointEvent) {
-				//newPost(content)
-				displayAddGroup(content)
-			}
+				vbox.Add(button)
 
-			return vbox
-		},
-	} {
-		navList.Add(i())
-	}
+				return vbox
+			},
+			func() fyne.CanvasObject {
+				// peers entry
+				vbox := container.NewVBox()
+				leftbox = vbox
+				createPeerList(vbox, content, myWindow)
+				return vbox
+			},
+			func() fyne.CanvasObject {
+				//	label := widget.NewLabel("Copy")
+				label := NewTappableLabel("New Post")
+				vbox := container.NewVBox()
+				vbox.Add(label)
+				label.OnTapped = func(e *fyne.PointEvent) {
+					newPost(content)
+
+				}
+				label.OnTappedSecondary = func(e *fyne.PointEvent) {
+					log.Printf("This is the override of ontapped.")
+					menuItem1 := fyne.NewMenuItem("A", nil)
+					menuItem2 := fyne.NewMenuItem("B", nil)
+					menuItem3 := fyne.NewMenuItem("C", nil)
+					menu := fyne.NewMenu("File", menuItem1, menuItem2, menuItem3)
+
+					popUpMenu := widget.NewPopUpMenu(menu, myWindow.Canvas())
+
+					popUpMenu.ShowAtPosition(e.AbsolutePosition)
+					popUpMenu.Show()
+				}
+				//	label.SetText("New Post")
+				return vbox
+			},
+			func() fyne.CanvasObject {
+				//	label := widget.NewLabel("Copy")
+				label := NewTappableLabel("Add Group")
+				vbox := container.NewVBox()
+				vbox.Add(label)
+				label.OnTapped = func(e *fyne.PointEvent) {
+					//newPost(content)
+					displayAddGroup(content)
+				}
+
+				return vbox
+			},
+		} {
+			navList.Add(i())
+		}
+	}()
 
 	//displayHome(content)
 	displayWelcome()
