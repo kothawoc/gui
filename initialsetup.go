@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"log/slog"
 	"strings"
 
 	"fyne.io/fyne/v2"
@@ -15,6 +16,9 @@ import (
 )
 
 func displayWelcome() {
+
+	slog.Info("Done done dial start app", "uri", fyne.CurrentApp().Storage().RootURI())
+
 	label := widget.NewLabel(lang.L("Welcome: Create a new account"))
 
 	rt := widget.NewRichTextFromMarkdown(lang.L("App: Welcome Message"))

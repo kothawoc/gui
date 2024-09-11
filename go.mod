@@ -3,9 +3,12 @@ module github.com/kothawoc/gui
 go 1.23.0
 
 require (
+	fyne.io/fyne v1.4.3
 	fyne.io/fyne/v2 v2.5.1
+	github.com/emersion/go-vcard v0.0.0-20230815062825-8fda7d206ec9
 	github.com/kothawoc/go-nntp v0.0.0-20240830121046-7682f02055ea
 	github.com/kothawoc/kothawoc v0.0.0-20240830184606-188f0e4732cc
+	github.com/mattn/go-sqlite3 v1.14.22
 )
 
 require (
@@ -13,7 +16,6 @@ require (
 	github.com/BurntSushi/toml v1.4.0 // indirect
 	github.com/cretz/bine v0.2.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/emersion/go-vcard v0.0.0-20230815062825-8fda7d206ec9 // indirect
 	github.com/fredbi/uri v1.1.0 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/fyne-io/gl-js v0.0.0-20230506162202-1fdaa286a934 // indirect
@@ -27,7 +29,6 @@ require (
 	github.com/gopherjs/gopherjs v1.17.2 // indirect
 	github.com/jeandeaual/go-locale v0.0.0-20240223122105-ce5225dcaa49 // indirect
 	github.com/jsummers/gobmp v0.0.0-20230614200233-a9de23ed2e25 // indirect
-	github.com/mattn/go-sqlite3 v1.14.22 // indirect
 	github.com/nicksnyder/go-i18n/v2 v2.4.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rymdport/portal v0.2.6 // indirect

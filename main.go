@@ -2,6 +2,7 @@ package main
 
 import (
 	"embed"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -11,6 +12,7 @@ import (
 	"os"
 	"strings"
 
+	"fyne.io/fyne/storage"
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
@@ -28,13 +30,28 @@ var localeFS embed.FS
 var kc *kothawoc.Client
 
 var mainWindow fyne.Window
+var parent *container.Split
 var leftbox *fyne.Container
 var content *fyne.Container
 
 var path = flag.String("path", os.Getenv("PWD")+"/data", "Path to data directires")
 var port = flag.Int("port", 1119, "Default NNTP port to listen on")
 
+func setContent(cnt *fyne.Container) {
+	parent.Trailing = cnt
+}
+
 func displayHome(content *fyne.Container) {
+
+	slog.Info("test one")
+	u := storage.NewURI("testfile.md")
+	// a, err := storage.OpenFileFromURI(u)
+	a := "aa"
+	err := errors.New("poop")
+	slog.Info("test moar")
+	//	pathstore := storage. .Storage().RootURI().Path() + "file.txt"
+	slog.Info("test storage stuff", "u", u, "a", a, "err", err)
+
 	content.RemoveAll()
 	label := widget.NewLabel("Select an item from the navigation pane")
 	rt := widget.NewRichTextFromMarkdown(lang.L("App: Welcome Message"))
@@ -212,135 +229,150 @@ func displayMessage(content *fyne.Container, messageNumber string) {
 
 var ScrollReset func()
 
+var ADB *ArticleDB
+
 func main() {
 	flag.Parse()
 
 	slog.Info("start new client")
-	KC, err := kothawoc.NewClient(*path, *port)
-	kc = KC
-	//kc = kothawoc.NewClient(os.Getenv("PWD") + "/../kothawoc/data")
-	slog.Info("Done new client start dial", "error", err)
-	kc.Dial()
 
-	slog.Info("Done done dial start app")
 	lang.AddTranslationsFS(localeFS, "locales")
 
 	myApp := app.New()
-	myWindow := myApp.NewWindow(lang.L("App: NNTP/TOR"))
-	mainWindow = myWindow
-	content = container.NewVBox()
 
-	// Create a list for the navigation pane
-	navList := container.NewVBox()
-	go func() {
-		for _, i := range []func() fyne.CanvasObject{
-			func() fyne.CanvasObject {
-				vbox := container.NewVBox()
+	myApp.Lifecycle().SetOnStarted(func() {
 
-				button := widget.NewButton("Home", nil)
-				button.Importance = widget.LowImportance
-				button.Alignment = widget.ButtonAlignLeading
+		myWindow := myApp.NewWindow(lang.L("App: NNTP/TOR"))
+		mainWindow = myWindow
 
-				button.OnTapped = func() {
-					displayMainFeed()
-					//displayHome(content)
-				}
+		KC, _ := kothawoc.NewClient(*path, *port)
+		kc = KC
 
-				vbox.Add(button)
+		ADB, _ = NewArticleDB(*path)
 
-				return vbox
-			},
-			func() fyne.CanvasObject {
-				vbox := container.NewVBox()
+		//kc = kothawoc.NewClient(os.Getenv("PWD") + "/../kothawoc/data")
+		//slog.Info("Done new client start dial", "error", err)
+		kc.Dial()
 
-				button := widget.NewButton(lang.L("List Newsgroups"), nil)
-				button.Importance = widget.LowImportance
-				button.Alignment = widget.ButtonAlignLeading
-				n := 0
-				button.OnTapped = func() {
-					displayNewsgroupList(content)
-					return
-					n++
-					button := widget.NewButton(fmt.Sprintf("Add [%d]", n), nil)
+		slog.Info("Done done dial start app")
+		content = container.NewVBox()
+
+		// Create a list for the navigation pane
+		navList := container.NewVBox()
+		go func() {
+			for _, i := range []func() fyne.CanvasObject{
+				func() fyne.CanvasObject {
+					vbox := container.NewVBox()
+
+					button := widget.NewButton("Home", nil)
 					button.Importance = widget.LowImportance
 					button.Alignment = widget.ButtonAlignLeading
 
-					content.Objects = append([]fyne.CanvasObject{button}, content.Objects...)
+					button.OnTapped = func() {
+						displayMainFeed()
+						//displayHome(content)
+					}
 
-				}
+					vbox.Add(button)
 
-				vbox.Add(button)
+					return vbox
+				},
+				func() fyne.CanvasObject {
+					vbox := container.NewVBox()
 
-				return vbox
-			},
-			func() fyne.CanvasObject {
-				// peers entry
-				vbox := container.NewVBox()
-				leftbox = vbox
-				createPeerList(vbox, content, myWindow)
-				return vbox
-			},
-			func() fyne.CanvasObject {
-				//	label := widget.NewLabel("Copy")
-				label := NewTappableLabel("New Post")
-				vbox := container.NewVBox()
-				vbox.Add(label)
-				label.OnTapped = func(e *fyne.PointEvent) {
-					newPost(content)
+					button := widget.NewButton(lang.L("List Newsgroups"), nil)
+					button.Importance = widget.LowImportance
+					button.Alignment = widget.ButtonAlignLeading
+					n := 0
+					button.OnTapped = func() {
+						displayNewsgroupList(content)
+						return
+						n++
+						button := widget.NewButton(fmt.Sprintf("Add [%d]", n), nil)
+						button.Importance = widget.LowImportance
+						button.Alignment = widget.ButtonAlignLeading
 
-				}
-				label.OnTappedSecondary = func(e *fyne.PointEvent) {
-					log.Printf("This is the override of ontapped.")
-					menuItem1 := fyne.NewMenuItem("A", nil)
-					menuItem2 := fyne.NewMenuItem("B", nil)
-					menuItem3 := fyne.NewMenuItem("C", nil)
-					menu := fyne.NewMenu("File", menuItem1, menuItem2, menuItem3)
+						content.Objects = append([]fyne.CanvasObject{button}, content.Objects...)
 
-					popUpMenu := widget.NewPopUpMenu(menu, myWindow.Canvas())
+					}
 
-					popUpMenu.ShowAtPosition(e.AbsolutePosition)
-					popUpMenu.Show()
-				}
-				//	label.SetText("New Post")
-				return vbox
-			},
-			func() fyne.CanvasObject {
-				//	label := widget.NewLabel("Copy")
-				label := NewTappableLabel("Add Group")
-				vbox := container.NewVBox()
-				vbox.Add(label)
-				label.OnTapped = func(e *fyne.PointEvent) {
-					//newPost(content)
-					displayAddGroup(content)
-				}
+					vbox.Add(button)
 
-				return vbox
-			},
-		} {
-			navList.Add(i())
+					return vbox
+				},
+				func() fyne.CanvasObject {
+					// peers entry
+					vbox := container.NewVBox()
+					leftbox = vbox
+					createPeerList(vbox, content, myWindow)
+					return vbox
+				},
+				func() fyne.CanvasObject {
+					//	label := widget.NewLabel("Copy")
+					label := NewTappableLabel("New Post")
+					vbox := container.NewVBox()
+					vbox.Add(label)
+					label.OnTapped = func(e *fyne.PointEvent) {
+						newPost(content)
+
+					}
+					label.OnTappedSecondary = func(e *fyne.PointEvent) {
+						log.Printf("This is the override of ontapped.")
+						menuItem1 := fyne.NewMenuItem("A", nil)
+						menuItem2 := fyne.NewMenuItem("B", nil)
+						menuItem3 := fyne.NewMenuItem("C", nil)
+						menu := fyne.NewMenu("File", menuItem1, menuItem2, menuItem3)
+
+						popUpMenu := widget.NewPopUpMenu(menu, myWindow.Canvas())
+
+						popUpMenu.ShowAtPosition(e.AbsolutePosition)
+						popUpMenu.Show()
+					}
+					//	label.SetText("New Post")
+					return vbox
+				},
+				func() fyne.CanvasObject {
+					//	label := widget.NewLabel("Copy")
+					label := NewTappableLabel("Add Group")
+					vbox := container.NewVBox()
+					vbox.Add(label)
+					label.OnTapped = func(e *fyne.PointEvent) {
+						//newPost(content)
+						displayAddGroup(content)
+					}
+
+					return vbox
+				},
+			} {
+				navList.Add(i())
+			}
+		}()
+
+		//displayHome(content)
+		displayWelcome()
+
+		navContainer := container.NewScroll(navList)
+		contentContainer := container.NewScroll(content)
+		ScrollReset = func() {
+			contentContainer.Offset.X = 0
+			contentContainer.Offset.Y = 0
 		}
-	}()
 
-	//displayHome(content)
-	displayWelcome()
-
-	navContainer := container.NewScroll(navList)
-	contentContainer := container.NewScroll(content)
-	ScrollReset = func() {
+		split := container.NewHSplit(navContainer, contentContainer)
+		parent = split
 		contentContainer.Offset.X = 0
 		contentContainer.Offset.Y = 0
-	}
 
-	split := container.NewHSplit(navContainer, contentContainer)
+		split.Offset = 0.2 // Adjust the initial size of the left pane
 
-	contentContainer.Offset.X = 0
-	contentContainer.Offset.Y = 0
+		// Set up the main content with the split container
+		myWindow.SetContent(split)
 
-	split.Offset = 0.2 // Adjust the initial size of the left pane
+		myWindow.Resize(fyne.NewSize(800, 600))
 
-	// Set up the main content with the split container
-	myWindow.SetContent(split)
+		myWindow.Show()
 
-	myWindow.Resize(fyne.NewSize(800, 600))
-	myWindow.ShowAndRun()
+	})
+	myApp.Run()
+	//myWindow.ShowAndRun()
 }

@@ -1,13 +1,16 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"log/slog"
 	"net/mail"
 	"net/textproto"
-	"sort"
+	"strings"
 	"time"
+
+	_ "github.com/mattn/go-sqlite3"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -15,48 +18,72 @@ import (
 
 	"github.com/kothawoc/go-nntp"
 	"github.com/kothawoc/kothawoc/pkg/messages"
+	serr "github.com/kothawoc/kothawoc/pkg/serror"
 )
 
-type ArtItem struct {
-	Date      int
-	MessageId string
-	Article   *nntp.Article
+const createArticleIndex string = `
+CREATE TABLE IF NOT EXISTS articles (
+	timestamp INT NOT NULL DEFAULT 0,
+	messageid TEXT NOT NULL UNIQUE,
+	refs TEXT NOT NULL DEFAULT ""
+	);
+`
+
+type ArticleDB struct {
+	*sql.DB
 }
 
-func createMessageCard(messageNumber string) *fyne.Container {
+func NewArticleDB(path string) (*ArticleDB, error) {
 
-	if messageNumber == "" {
-		return container.NewWithoutLayout()
+	db, err := sql.Open("sqlite3", path+"/gui-article.db")
+	if err != nil {
+		return nil, serr.New(err)
 	}
-	mesgCard := container.NewVBox()
-	//label := widget.NewLabel("The content of: " + messageNumber)
-	//mesgCard.Add(label)
 
-	//a, messageId, rawArticle, err := kc.NNTPclient.Article(messageNumber)
-	_, _, rawArticle, err := kc.NNTPclient.Article(messageNumber)
+	if _, err := db.Exec(createArticleIndex); err != nil {
+		slog.Info("FAILED Create DB database query", "error", err, "path", path, "query", createArticleIndex)
+		return nil, serr.New(err)
+	}
+	if _, err := db.Exec("PRAGMA journal_mode = WAL;pragma synchronous = normal;pragma temp_store = memory;pragma mmap_size = 30000000000;pragma page_size = 32768;pragma auto_vacuum = incremental;pragma incremental_vacuum;"); err != nil {
+		slog.Info("FAILED PRAGMA journal_mode = WAL;pragma synchronous = normal;pragma temp_store = memory;pragma mmap_size = 30000000000;pragma page_size = 32768;pragma auto_vacuum = incremental;pragma incremental_vacuum;", "error", err, "path", path, "query", createArticleIndex)
+		return nil, serr.New(err)
+	}
 
-	/*
-		buf := make([]byte, 8129)
-		n, err := rawArticle.Read(buf)
-		rawMail := string(buf[:n])
-		splitMail := (strings.SplitN(rawMail, "\r\n\r\n", 2))
-		body := ""
-		if len(splitMail) == 2 {
-			body = splitMail[1]
-		} else {
-			splitMail := (strings.SplitN(rawMail, "\n\n", 2))
+	a := &ArticleDB{db}
 
-			if len(splitMail) == 2 {
-				body = splitMail[1]
-			} else {
-				body = rawMail
-			}
-		}
-	*/
-	slog.Info("Crash City", "messageNum", messageNumber, "rawArt", rawArticle)
+	go a.run()
+	return a, nil
+}
+
+func (a *ArticleDB) Insert(time int, messageid, references string) error {
+	_, err := a.Exec("INSERT INTO ARTICLES (timestamp,messageid,refs) VALUES(?,?,?);", time, messageid, references)
+
+	//slog.Info("Inserting", "error", err, "time", time, "messageid", messageid, "references", references)
+	return serr.New(err)
+}
+
+func (a *ArticleDB) GetLength() (int64, error) {
+	length := int64(0)
+	row := a.QueryRow("SELECT COUNT(timestamp) FROM articles WHERE refs=\"\";")
+	err := row.Scan(&length)
+	return length, serr.New(err)
+}
+
+func (a *ArticleDB) GetItem(num int) (*messages.MessageTool, error) {
+	messageid := ""
+	row := a.QueryRow("SELECT messageid FROM articles ORDER BY timestamp DESC LIMIT 1 OFFSET ?;", num)
+	err := row.Scan(&messageid)
+	if err != nil {
+		return nil, serr.Errorf("cant find message number [%q]", err)
+	}
+	_, _, rawArticle, err := kc.NNTPclient.Article(messageid)
+
+	if err != nil {
+		return nil, serr.New(err)
+	}
 	mailMsg, err := mail.ReadMessage(rawArticle)
 	if err != nil {
-		log.Fatal(err)
+		return nil, serr.New(err)
 	}
 
 	article := &nntp.Article{
@@ -68,220 +95,101 @@ func createMessageCard(messageNumber string) *fyne.Container {
 
 	msg := messages.NewMessageToolFromArticle(article)
 
-	// content := container.NewBorder(
-	hbox := container.NewHBox()
-	shortFrom := msg.Article.Header.Get("From")
-	shortFrom = shortFrom[:3] + "..." + shortFrom[len(shortFrom)-4:]
-	tl := widget.NewRichTextWithText(shortFrom)
-	tc := widget.NewRichTextFromMarkdown("**" + msg.Article.Header.Get("Subject") + "**")
-	tr := widget.NewRichTextFromMarkdown(msg.Article.Header.Get("Date"))
-	hbox.Add(tl)
-	hbox.Add(tc)
-	hbox.Add(tr)
-	bbox := container.NewBorder(nil, nil, tl, tr, tc)
+	return msg, serr.New(err)
+}
 
-	mesgCard.Add(bbox)
+func (a *ArticleDB) run() {
+	for {
+		groups, err := kc.NNTPclient.List("")
+		if err != nil {
+			slog.Warn("Can't list groups")
+		}
+		for _, group := range groups {
 
-	//content.Add(widget.NewLabel("From: " + msg.Article.Header.Get("From") + "\n" +
-	//	"Subject: " + msg.Article.Header.Get("Subject") + "\n" +
-	//	"Date: " + msg.Article.Header.Get("Date") + "\n" +
-	//	"\n"))
-	//content.Add(widget.NewLabel("Subject: " + msg.Article.Header.Get("Subject")))
-	//content.Add(widget.NewLabel("Date: " + msg.Article.Header.Get("Date")))
-	//content.Add(widget.NewLabel(" "))
-	preamble := widget.NewLabel(msg.Preamble)
-	preamble.Wrapping = fyne.TextWrap(fyne.TextWrapWord)
-	mimeParts := widget.NewLabel(fmt.Sprintf("%s", msg.Parts))
-	mimeParts.Wrapping = fyne.TextWrap(fyne.TextWrapWord)
-	mesgCard.Add(preamble)
-	mesgCard.Add(mimeParts)
+			a, err := kc.NNTPclient.Group(group.Name)
 
-	log.Printf("Finished displaying article")
-	//label2 := widget.NewLabel(fmt.Sprintf("[%v]\n[%v]\n[%v]\n[%v]\n]", a, messageId, body, err))
+			if err != nil {
+				log.Printf("Error in listing newsgroup conftent: [%v]", err)
+				return
+			}
+			//tmp, err := kc.NNTPclient.ListOverviewFmt()
+			//log.Printf("listoverviewformat [%#v][%v]", tmp, err)
+			res, err := kc.NNTPclient.Over(int(a.Low), int(a.High))
+			for _, art := range res {
+				//date := time.art.Date
 
-	//content.Add(label2)
+				//s := "Tue Sep 16 21:58:58 +0000 2014"
+				// Date: Tue, 10 Sep 2024 15:11:19 +0000
+				const rfc2822 = "Mon, 02 Jan 2006 15:04:05 -0700 "
+				//  MessageId:"Sat, 31 Aug 2024 19:59:07 +0000", References:"<1jd6tgb-snjkpy2l
+				slog.Info(fmt.Sprintf("[%#v][%v]\n", art, art))
+				// actually the data TODO FIX THIS BUG
+				t, err := time.Parse(rfc2822, art.Date)
+				if err != nil {
+					slog.Info("Error", "error", err)
+					return
+				}
 
-	return mesgCard
+				ADB.Insert(int(t.UTC().Unix()), art.MessageId, art.References)
+				//fmt.Println(u)
+				//f := t.Format(time.UnixDate)
+				//fmt.Println(f)
+			}
+		}
+
+		slog.Info("looping")
+		time.Sleep(time.Second * 5)
+	}
 }
 
 func displayMainFeed() {
-	ArtDB := map[string]ArtItem{}
-	ArtDBindex := []string{}
-	//label := widget.NewLabel(lang.L("Welcome: Create a new account"))
 
-	// nasty memory hungry hack, we need to load them into an sqlite cache for manipulating them
-	groups, err := kc.NNTPclient.List("")
-	if err != nil {
-		slog.Warn("Can't list groups")
-	}
-	for _, group := range groups {
+	var List *widget.List
 
-		a, err := kc.NNTPclient.Group(group.Name)
-
-		if err != nil {
-			log.Printf("Error in listing newsgroup conftent: [%v]", err)
-			return
-		}
-		//tmp, err := kc.NNTPclient.ListOverviewFmt()
-		//log.Printf("listoverviewformat [%#v][%v]", tmp, err)
-		res, err := kc.NNTPclient.Over(int(a.Low), int(a.High))
-		for _, art := range res {
-			//date := time.art.Date
-
-			//s := "Tue Sep 16 21:58:58 +0000 2014"
-			// Date: Tue, 10 Sep 2024 15:11:19 +0000
-			const rfc2822 = "Mon, 02 Jan 2006 15:04:05 -0700 "
-			//  MessageId:"Sat, 31 Aug 2024 19:59:07 +0000", References:"<1jd6tgb-snjkpy2l
-			slog.Info(fmt.Sprintf("[%#v][%v]\n", art))
-			// actually the data TODO FIX THIS BUG
-			t, err := time.Parse(rfc2822, art.Date)
+	list := widget.NewList(
+		func() int {
+			length, err := ADB.GetLength()
 			if err != nil {
-				slog.Info("Error", "error", err)
-				return
+				slog.Error("Article db, can't get length", "error", err)
 			}
+			return int(length)
+		},
+		func() fyne.CanvasObject {
+			vbox := container.NewVBox()
+			tl := widget.NewRichTextFromMarkdown("From")
+			tc := widget.NewRichTextFromMarkdown("Subject")
+			tr := widget.NewRichTextFromMarkdown("Date")
+			bbox := container.NewBorder(nil, nil, tl, tr, tc)
+			vbox.Add(bbox)
+			body := widget.NewRichTextFromMarkdown("Content")
+			body.Wrapping = fyne.TextWrapWord
+			vbox.Add(body)
+			return vbox
+		},
+		func(i widget.ListItemID, o fyne.CanvasObject) {
 
-			// actually the message id, TO BUG FIX THIS
-			idx := fmt.Sprintf("%d-%s", t, art.MessageId)
-			ArtDB[idx] = ArtItem{
-				MessageId: art.MessageId,
-				Date:      int(t.Unix()),
-			}
-			ArtDBindex = append(ArtDBindex, idx)
+			msg, _ := ADB.GetItem(i)
+			shortFrom := msg.Article.Header.Get("From")
+			shortFrom = shortFrom[:3] + "..." + shortFrom[len(shortFrom)-4:]
+			body := fmt.Sprintf("%s\r\n%s", msg.Preamble, msg.Parts)
+			splitDate := strings.Split(msg.Article.Header.Get("Date"), " ")
+			date := strings.Join(splitDate[1:len(splitDate)-1], " ")
 
-			//fmt.Println(u)
-			//f := t.Format(time.UnixDate)
-			//fmt.Println(f)
-		}
-	}
+			o.(*fyne.Container).Objects[0].(*fyne.Container).Objects[0].(*widget.RichText).ParseMarkdown("**" + msg.Article.Header.Get("Subject") + "**")
+			o.(*fyne.Container).Objects[0].(*fyne.Container).Objects[1].(*widget.RichText).ParseMarkdown(shortFrom)
+			o.(*fyne.Container).Objects[0].(*fyne.Container).Objects[2].(*widget.RichText).ParseMarkdown(date)
+			o.(*fyne.Container).Objects[1].(*widget.RichText).ParseMarkdown(body)
 
-	sort.Strings(ArtDBindex)
+			height := o.(*fyne.Container).Objects[0].Size().Height + o.(*fyne.Container).Objects[1].Size().Height
 
-	Vbox := container.NewVBox()
+			List.SetItemHeight(i, height)
+		})
 
-	for i := len(ArtDBindex) - 1; i >= 0; i-- {
-		//ArtDBindex = append(ArtDBindex, i)
-		Vbox.Add(widget.NewSeparator())
-		Vbox.Add(createMessageCard(ArtDB[ArtDBindex[i]].MessageId))
-	}
+	List = list
 
-	/*
-		rt := widget.NewRichTextFromMarkdown(lang.L("App: Welcome Message"))
-		rt.Wrapping = fyne.TextWrapWord
+	parent.Trailing = list
 
-		dId := kc.DeviceId()
-		//dln := len(dId)
-		//shortId := dId[0:3] + "..." + dId[dln-3:]
-		groupName := widget.NewEntry()
-		groupDescription := widget.NewEntry()
-		idAlias := widget.NewEntry()
-		language := widget.NewEntry()
-		url := widget.NewEntry()
-
-		//{"post", "read", "reply", "cancel", "supersede"}
-		//labelSupersede := lang.L("Supersede")
-		//labelCancel := lang.L("Cancel")
-		labelRead := lang.L("Read")
-		labelReply := lang.L("Reply")
-		labelPost := lang.L("Post")
-
-		//	labelUserId := lang.L("UserId")
-
-		checkGroup := widget.NewCheckGroup([]string{}, func(s []string) { fmt.Println("selected", s) })
-		checkGroup.Selected = []string{labelRead, labelReply}
-		checkGroup.Horizontal = true
-
-		sendFunc := func() {}
-
-		form := &widget.Form{
-			//	Items: []*widget.FormItem{
-			//	},
-			OnCancel: func() {
-				fmt.Println("Cancelled")
-			},
-			OnSubmit: func() {
-				sendFunc()
-
-			},
-		}
-		pm := NewPemsMgr(form)
-		//pm.Add()
-		pm.Render()
-
-		sendFunc = func() {
-
-			card := vcard.Card{}
-			card.SetValue(vcard.FieldNickname, idAlias.Text)
-			card.SetValue(vcard.FieldLanguage, language.Text)
-			card.SetValue(vcard.FieldURL, url.Text)
-			gParms := vcard.Params{}
-			for _, item := range checkGroup.Selected {
-				if item == labelRead {
-					gParms["read"] = []string{"true"}
-				}
-				if item == labelReply {
-					gParms["reply"] = []string{"true"}
-				}
-				if item == labelPost {
-					gParms["post"] = []string{"true"}
-				}
-			}
-			card.Add("X-KW-PERMS", &vcard.Field{
-				Value:  "group",
-				Params: gParms,
-			})
-			for _, item := range pm.Items {
-				parms := vcard.Params{}
-				if item.Read.Checked {
-					parms["read"] = []string{"true"}
-				}
-				if item.Reply.Checked {
-					parms["reply"] = []string{"true"}
-				}
-				if item.Post.Checked {
-					parms["post"] = []string{"true"}
-				}
-				if item.Cancel.Checked {
-					parms["cancel"] = []string{"true"}
-				}
-				if item.Supersede.Checked {
-					parms["supersede"] = []string{"true"}
-				}
-				card.Add("X-KW-PERMS", &vcard.Field{
-					Value:  item.TorId.Text,
-					Params: parms,
-				})
-			}
-			vcard.ToV4(card)
-
-			msg, err := messages.CreateNewsGroupMail(kc.DeviceKey(), kc.Server.IdGenerator, dId+"."+groupName.Text, groupDescription.Text, card, nntp.PostingPermitted) //(string, error)
-			if err != nil {
-				log.Printf("Failed at creating new groups mail.")
-			}
-
-			kc.NNTPclient.Post(strings.NewReader(msg))
-
-		}
-		// add group name
-		// group descripton
-		// group vcard
-		//   CATEGORIES:public\,cabbage
-		//   LANG:enCheckGroup Item 2
-		//   NICKNAME:The magic bus
-		//   URL:https://github.com/kothawoc
-
-		form.Append("ID Alias", idAlias)
-		form.Append("Description", groupDescription)
-		form.Append("Language", language)
-		form.Append("URL", url)
-		form.Append("Group Permissions", checkGroup)
-		form.Append("Extra Perms", pm.Vbox)
-	*/
-	content.RemoveAll()
-	//	label := widget.NewLabel("Select an item from the navigation pane")
-	//content.Add(label)
-	//content.Add(form)
-	content.Add(Vbox)
-
-	content.Refresh()
+	parent.Trailing.Refresh()
+	parent.Refresh()
 
 }
