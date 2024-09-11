@@ -6,11 +6,11 @@
 - [x] List groups.
 - [x] List group content.
 - [x] Display message.
-- [ ] Initial setup.
+- [/] Initial setup.
 - [x] Add peers.
 - [x] Remove peers.
 - [x] Add groups.
-- [ ] Remove groups.
+- [/] Remove groups.
 - [x] Post to group.
 - [ ] Display temporal front page of feeds
 - [x] Display specific group.

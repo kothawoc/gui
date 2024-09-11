@@ -242,7 +242,8 @@ func main() {
 				button.Alignment = widget.ButtonAlignLeading
 
 				button.OnTapped = func() {
-					displayHome(content)
+					displayMainFeed()
+					//displayHome(content)
 				}
 
 				vbox.Add(button)
