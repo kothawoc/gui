@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/lang"
 	"fyne.io/fyne/v2/widget"
 	"github.com/emersion/go-vcard"
@@ -17,7 +18,8 @@ import (
 	"github.com/kothawoc/kothawoc/pkg/messages"
 )
 
-func displayAddGroup(content *fyne.Container) {
+func newAddGroup() *fyne.Container {
+	content := container.NewVBox()
 
 	dId := kc.DeviceId()
 	dln := len(dId)
@@ -129,22 +131,25 @@ func displayAddGroup(content *fyne.Container) {
 	form.Append("Group Permissions", checkGroup)
 	form.Append("Extra Perms", pm.Vbox)
 
-	content.RemoveAll()
 	label := widget.NewLabel("Select an item from the navigation pane")
 	content.Add(label)
 	content.Add(form)
 
 	content.Refresh()
+
+	return content
 }
 
-func displayNewsgroupList(content *fyne.Container) {
-	content.RemoveAll()
+func newNewsgroupList() *container.Scroll {
+	content := container.NewVBox()
+
 	label := widget.NewLabel("Select an item from the news groups list")
+	label.Wrapping = fyne.TextWrapBreak
 	content.Add(label)
 
 	groups, err := kc.NNTPclient.List("")
 	if err != nil {
-		return
+		return nil
 	}
 	//	mds := ""
 	for _, g := range groups {
@@ -160,15 +165,20 @@ func displayNewsgroupList(content *fyne.Container) {
 		//		mds += g.Name + "\n\n"
 	}
 
+	content.Resize(parent.Trailing.Size())
 	content.Show()
 	content.Refresh()
+
+	setContent(content)
+
+	scroll := container.NewScroll(content)
 
 	//log.Printf("display mds[%s]", mds)
 
 	//	rt := widget.NewRichTextFromMarkdown(mds)
 
 	//	content.Add(rt)
-
+	return scroll
 }
 
 func displayNewsgroupContent(content *fyne.Container, group string) {
@@ -197,7 +207,7 @@ func displayNewsgroupContent(content *fyne.Container, group string) {
 			Date:=MessageId
 			MessageId:=References
 		*/
-		MessageId := line.References
+		MessageId := line.MessageId
 
 		item := NewTappableLabel(line.Subject)
 		item.OnTapped = func(e *fyne.PointEvent) {
@@ -237,7 +247,7 @@ func displayNewsgroupContent(content *fyne.Container, group string) {
 				kc.NNTPclient.Post(strings.NewReader(msg))
 				log.Printf("AND THE LINES WAS[%#v]", line)
 
-				createPeerList(leftbox, content, mainWindow)
+				createPeerList(leftbox)
 			}
 
 			//	m := messages.MessageTool{}

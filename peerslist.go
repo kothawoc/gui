@@ -12,7 +12,7 @@ import (
 
 var peerlist []string = []string{}
 
-func createPeerList(vbox, content *fyne.Container, win fyne.Window) {
+func createPeerList(vbox *fyne.Container) {
 	//*
 	//group := kc.DeviceId() + ".peers"
 	go func() {
@@ -51,7 +51,7 @@ func createPeerList(vbox, content *fyne.Container, win fyne.Window) {
 			}
 
 			peerlist = append(peerlist, text)
-			createPeerList(vbox, content, win)
+			createPeerList(vbox)
 			vbox.Refresh()
 
 		}
@@ -65,7 +65,7 @@ func createPeerList(vbox, content *fyne.Container, win fyne.Window) {
 			button.Hide()
 			edit.SetText("")
 			edit.Show()
-			win.Canvas().Focus(edit)
+			mainWindow.Canvas().Focus(edit)
 		}
 
 		for _, text := range peerlist {
@@ -97,27 +97,29 @@ func createPeerList(vbox, content *fyne.Container, win fyne.Window) {
 							peerlist = append(peerlist[:i], peerlist[i+1:]...)
 						}
 					}
-					createPeerList(vbox, content, win)
+
+					createPeerList(vbox)
+
+					content.Add(button)
+					content.Refresh()
 				}
 
-				content.Add(button)
-				content.Refresh()
+				item.OnTappedSecondary = func(e *fyne.PointEvent) {
+
+					menuItem1 := fyne.NewMenuItem(lang.L("Unpeer"), nil)
+					menuItem2 := fyne.NewMenuItem(lang.L("Subcscribe to Groups"), nil)
+					menu := fyne.NewMenu(lang.L("menu.Peer"), menuItem1, menuItem2)
+
+					popUpMenu := widget.NewPopUpMenu(menu, mainWindow.Canvas())
+
+					popUpMenu.ShowAtPosition(e.AbsolutePosition)
+					popUpMenu.Show()
+				}
+
 			}
 
-			item.OnTappedSecondary = func(e *fyne.PointEvent) {
-
-				menuItem1 := fyne.NewMenuItem(lang.L("Unpeer"), nil)
-				menuItem2 := fyne.NewMenuItem(lang.L("Subcscribe to Groups"), nil)
-				menu := fyne.NewMenu(lang.L("menu.Peer"), menuItem1, menuItem2)
-
-				popUpMenu := widget.NewPopUpMenu(menu, win.Canvas())
-
-				popUpMenu.ShowAtPosition(e.AbsolutePosition)
-				popUpMenu.Show()
-			}
-
+			vbox.Refresh()
 		}
-
-		vbox.Refresh()
 	}()
+
 }

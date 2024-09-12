@@ -14,6 +14,7 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/lang"
 	"fyne.io/fyne/v2/widget"
 
 	"github.com/kothawoc/go-nntp"
@@ -122,7 +123,7 @@ func (a *ArticleDB) run() {
 				// Date: Tue, 10 Sep 2024 15:11:19 +0000
 				const rfc2822 = "Mon, 02 Jan 2006 15:04:05 -0700 "
 				//  MessageId:"Sat, 31 Aug 2024 19:59:07 +0000", References:"<1jd6tgb-snjkpy2l
-				slog.Info(fmt.Sprintf("[%#v][%v]\n", art, art))
+				//slog.Info(fmt.Sprintf("[%#v][%v]\n", art, art))
 				// actually the data TODO FIX THIS BUG
 				t, err := time.Parse(rfc2822, art.Date)
 				if err != nil {
@@ -142,11 +143,14 @@ func (a *ArticleDB) run() {
 	}
 }
 
-func displayMainFeed() {
+type FeedObjects struct {
+	Obj       fyne.CanvasObject
+	MessageId string
+}
 
-	var List *widget.List
-
-	list := widget.NewList(
+func newMainFeed() *widget.List {
+	//widgetMessageIds := map[widget.ListItemID]FeedObjects{}
+	return widget.NewList(
 		func() int {
 			length, err := ADB.GetLength()
 			if err != nil {
@@ -164,6 +168,10 @@ func displayMainFeed() {
 			body := widget.NewRichTextFromMarkdown("Content")
 			body.Wrapping = fyne.TextWrapWord
 			vbox.Add(body)
+			//replyForm := newReply("group string", "subject string", "references string")
+			//vbox.Add(replyForm)
+			//replyForm.Refresh()
+			//	vbox.Add(newReply("group string", "subject string", "references string"))
 			return vbox
 		},
 		func(i widget.ListItemID, o fyne.CanvasObject) {
@@ -174,22 +182,47 @@ func displayMainFeed() {
 			body := fmt.Sprintf("%s\r\n%s", msg.Preamble, msg.Parts)
 			splitDate := strings.Split(msg.Article.Header.Get("Date"), " ")
 			date := strings.Join(splitDate[1:len(splitDate)-1], " ")
+			subject := "**" + msg.Article.Header.Get("Subject") + "**"
+			controlHeader := msg.Article.Header.Get("Control")
+			//widgetMessageIds[i] = msg.Article.Header.Get("MessageId")
+			if controlHeader != "" {
+				splitHeader := strings.Split(controlHeader, " ")
+				switch splitHeader[0] {
+				case "newgroup", "newsgroup":
+					subject = "**" + lang.L("New News Group") + "**"
+					body = splitHeader[1]
+				}
+			}
 
-			o.(*fyne.Container).Objects[0].(*fyne.Container).Objects[0].(*widget.RichText).ParseMarkdown("**" + msg.Article.Header.Get("Subject") + "**")
-			o.(*fyne.Container).Objects[0].(*fyne.Container).Objects[1].(*widget.RichText).ParseMarkdown(shortFrom)
-			o.(*fyne.Container).Objects[0].(*fyne.Container).Objects[2].(*widget.RichText).ParseMarkdown(date)
-			o.(*fyne.Container).Objects[1].(*widget.RichText).ParseMarkdown(body)
-
+			//vbox := o.(*fyne.Container)
+			subjectWidget := o.(*fyne.Container).Objects[0].(*fyne.Container).Objects[0].(*widget.RichText)
+			fromWidget := o.(*fyne.Container).Objects[0].(*fyne.Container).Objects[1].(*widget.RichText)
+			dateWidget := o.(*fyne.Container).Objects[0].(*fyne.Container).Objects[2].(*widget.RichText)
+			bodyWidget := o.(*fyne.Container).Objects[1].(*widget.RichText)
+			subjectWidget.ParseMarkdown(subject)
+			fromWidget.ParseMarkdown(shortFrom)
+			dateWidget.ParseMarkdown(date)
+			bodyWidget.ParseMarkdown(body)
 			height := o.(*fyne.Container).Objects[0].Size().Height + o.(*fyne.Container).Objects[1].Size().Height
+			mainFeed.SetItemHeight(i, height)
+			//widgetMessageIds[i] = FeedObjects{
+			//	Obj:       o,
+			//	MessageId: msg.Article.Header.Get("MessageId"),
+			//}
+			/*
+				if len(vbox.Objects) == 2 {
+					obj := vbox.Objects
+					obj = append(obj, widget.NewRichTextWithText("text string"))
+					vbox.Objects = obj
+					o = vbox
+					o.Refresh()
 
-			List.SetItemHeight(i, height)
+					//vbox.Add(widget.NewRichTextWithText("text string"))
+				}
+			*/
+			//			mainFeed.OnSelected = func(id widget.ListItemID) {
+
+			//		}
 		})
-
-	List = list
-
-	parent.Trailing = list
-
-	parent.Trailing.Refresh()
-	parent.Refresh()
 
 }

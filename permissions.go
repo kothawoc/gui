@@ -33,7 +33,7 @@ func NewPemsMgr(f *widget.Form) PermsMgr {
 func (p *PermsMgr) Render() {
 	p.Vbox.RemoveAll()
 	for idx, item := range p.Items {
-		item.Idx = idx
+		//item.Idx = idx
 		item.Remove.OnTapped = func() {
 			p.Items = append(p.Items[:idx], p.Items[idx+1:]...)
 			p.Render()
