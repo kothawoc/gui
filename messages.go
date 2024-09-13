@@ -143,7 +143,7 @@ func newReply(group, subject, references string) *widget.Form {
 
 }
 
-var updateGroupsList func()
+var updateGroupsList func() = func() {}
 
 func newPost() *widget.Form {
 
@@ -154,15 +154,6 @@ func newPost() *widget.Form {
 	//	mds := ""
 	groupList := []string{}
 	groupsEntry := widget.NewSelectEntry(groupList)
-
-	updateGroupsList = func() {
-		groupList := []string{}
-		for _, g := range groups {
-			groupList = append(groupList, g.Name)
-		}
-		groupsEntry.SetOptions(groupList)
-		slog.Info("updating groups list")
-	}
 	subjectEntry := widget.NewEntry()
 
 	editor := widget.NewMultiLineEntry()
@@ -207,7 +198,15 @@ func newPost() *widget.Form {
 	form.Append("Subject", subjectEntry)
 	form.Append("Message", editor)
 	//form.SetOnValidationChanged()
-	//updateGroupsList()
+
+	updateGroupsList = func() {
+		groupList := []string{}
+		for _, g := range groups {
+			groupList = append(groupList, g.Name)
+		}
+		groupsEntry.SetOptions(groupList)
+		slog.Info("updating groups list")
+	}
 	return form
 
 }

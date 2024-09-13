@@ -176,7 +176,12 @@ func newMainFeed() *widget.List {
 		},
 		func(i widget.ListItemID, o fyne.CanvasObject) {
 
-			msg, _ := ADB.GetItem(i)
+			msg, err := ADB.GetItem(i)
+			if err != nil {
+				slog.Error("cannot get article", "id", i)
+				return
+			}
+			slog.Debug("get listwidget article", "id", i, "msg", msg)
 			shortFrom := msg.Article.Header.Get("From")
 			shortFrom = shortFrom[:3] + "..." + shortFrom[len(shortFrom)-4:]
 			body := fmt.Sprintf("%s\r\n%s", msg.Preamble, msg.Parts)
